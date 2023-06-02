@@ -180,7 +180,7 @@ for (let b = 0; b < n_blocks; b++) {
 // idea: change this to CallFunction and avoid the screen clear
 const preTestTrial = {
   type: jsPsychCallFunction,
-  func: (done) => {   // done function doesn't do anything
+  func: (done) => {   
     const display = jsPsych.getDisplayElement();
     display.innerHTML = `
       <div style="position: relative; width:100vw; height: 100vh; cursor: none;">
