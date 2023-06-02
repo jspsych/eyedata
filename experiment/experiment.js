@@ -1,6 +1,6 @@
 const n_test_trials = 144;
-const n_test_trials_per_block = 3 //48;
-const n_blocks = 1 //n_test_trials / n_test_trials_per_block;
+const n_test_trials_per_block = 48;
+const n_blocks = n_test_trials / n_test_trials_per_block;
 const trial_duration = 1000;
 const saccade_time = 1000;
 const min_x = 5;
@@ -10,18 +10,13 @@ const max_y = 95;
 
 let n_complete = 0;
 
-/*
+
 const jsPsych = initJsPsych({
   on_finish: ()=>{
     window.location.href = "https://app.prolific.co/submissions/complete?cc=96A9C46B";
   }
 });
-*/
-const jsPsych = initJsPsych({
-  on_finish: function() {
-    jsPsych.data.displayData();
-  }
-})
+
 
 const subject_id = jsPsych.randomization.randomID(8);
 
@@ -174,7 +169,6 @@ for (let b = 0; b < n_blocks; b++) {
     let idx = Math.floor(Math.random() * point_grid.length); // Generate a random index in range of point_grid
     let point = point_grid[idx]; // Get the randomly selected point
     point_grid.splice(idx, 1); // Remove point from point_grid
-    // let point = point_grid[i] // This is to confirm that grid works
     test_parameters[b].push({
       x: point[0],
       y: point[1],
