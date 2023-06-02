@@ -203,7 +203,6 @@ const testTrial = {
   data: {
     x: jsPsych.timelineVariable("x"),
     y: jsPsych.timelineVariable("y"),
-    point_type: jsPsych.timelineVariable("type"),
   },
   on_finish: (data) => {
     n_complete++;
