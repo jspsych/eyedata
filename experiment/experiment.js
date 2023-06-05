@@ -79,10 +79,9 @@ const cameraSetup = {
     {
       type: jsPsychHtmlButtonResponse,
       stimulus: `
-         <p>Are you using an integrated or external webcam? Images below for reference:
-         <div style='width: 1100px;'>
-         <div style='float: left;'><img src='img/main-qimg-6386c26caa233528b867324771067c80.jpeg'></img> 
-         <div style='float: right;'><img src='img/external-webcam-atop-computer-1024x691.jpg'></img>
+         <p>Are you using an integrated or external webcam? Image below for reference:
+         <div style='width: 960px;'>
+         <div style='float: left;'><img src='img/Webcam Prompt Image.jpg'></img> 
          `,
       choices: ["Integrated Webcam", "External Webcam"], 
     },
