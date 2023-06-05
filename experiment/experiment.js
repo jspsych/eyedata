@@ -320,5 +320,6 @@ jsPsych.run([
   test,
   save_all,
   exit_full_screen,
+  final_survey,
   final_instructions,
 ]);
