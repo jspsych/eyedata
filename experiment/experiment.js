@@ -94,9 +94,13 @@ const cameraSetup = {
     {
       type: jsPsychMirrorCamera,
       prompt:
-        `<p>Please adjust the camera, your position, and the lighting to get a good view of your face and especially your eyes.</p>
-        <p>(Tips: To avoid backlighting, make sure a strong light is in front of you. Additionally, you should be the only face in frame.)</p>
-        <p>If you can clearly see the whites of your eyes, you're likely in a good spot.</p>`
+        `<p>Please adjust the camera, your position, and the lighting to get a good view of your face and especially your eyes. Here are some tips:</p>
+        <ul>
+          <li>To avoid backlighting, make sure a strong light is in front of you.</li>
+          <li>If you wear glasses, try to reduce glare on the lenses as much as possible.</li>
+          <li>You should be the only face in frame.</li>
+        </ul>
+        <p>If you can clearly see the whites of your eyes, you're likely in a good spot!</p>`
     },
   ],
 };
