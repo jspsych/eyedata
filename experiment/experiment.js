@@ -13,7 +13,7 @@ let n_complete = 0;
 
 const jsPsych = initJsPsych({
   on_finish: ()=>{
-    window.location.href = "https://app.prolific.co/submissions/complete?cc=96A9C46B";
+    window.location.href = "https://app.prolific.co/submissions/complete?cc=C1AO2TJ9";
   }
 });
 
