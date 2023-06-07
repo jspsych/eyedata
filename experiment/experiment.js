@@ -355,7 +355,9 @@ for (let b = 0; b < test_parameters.length; b++) {
 
 const save_all = {
   type: jsPsychCallFunction,
-  func: () => {
+  func: (done) => {
+    const display = jsPsych.getDisplayElement();
+    display.innerHTML = `<p>Saving data. This takes about 5 seconds.</p>`;
     fetch("server/save_json.php", {
       method: "POST",
       body: JSON.stringify({
@@ -376,8 +378,9 @@ const save_all = {
         "Content-Type": "application/json",
       },
     });
+    setTimeout(done, 4000);
   },
-  post_trial_gap: 2000,
+  aysnc: true
 };
 
 const exit_full_screen = {
