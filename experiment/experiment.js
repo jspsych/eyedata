@@ -153,7 +153,8 @@ const practiceTrials = {
         stimulus: () => {
           return `<div style="position: relative; width:100vw; height: 100vh; cursor: none;"><div class="fixation-point dot-detect" style="top:${jsPsych.timelineVariable(
             "y"
-          )}%; left:${jsPsych.timelineVariable("x")}%;"></div></div>`;
+          )}%; left:${jsPsych.timelineVariable("x")}%;"></div></div>
+          <div style="position: absolute; bottom: 5%; width:100vw; text-align: center;"><p>Press the spacebar when the dot turns red.</p></div>`;
         },
         choices: [" "],
         data: {
