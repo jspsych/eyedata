@@ -55,13 +55,7 @@ const instructions = {
     },
     {
       type: jsPsychHtmlButtonResponse,
-      stimulus: "<p>Before we begin, will you be wearing glasses for the experiment? Your data will be included whether you wear glasses or not.</p>",
-      choices: ["Yes, I am wearing glasses", "No, I am not wearing glasses"],
-      css_classes: ["instructions"], 
-    },
-    {
-      type: jsPsychHtmlButtonResponse,
-      stimulus: `<p>Great! Now let's get your camera ready.</p>`,
+      stimulus: `<p>Let's begin by getting your camera ready.</p>`,
       choices: ["Continue"],
       css_classes: ["instructions"],
     },
@@ -101,6 +95,11 @@ const cameraSetup = {
           <li>You should be the only face in frame.</li>
         </ul>
         <p>If you can clearly see the whites of your eyes, you're likely in a good spot!</p>`
+    },
+    {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: "<p>Before we begin, will you be wearing glasses for the experiment? Your data will be included whether you wear glasses or not.</p>",
+      choices: ["Yes, I am wearing glasses.", "No, I am not wearing glasses."],
     },
   ],
 };
