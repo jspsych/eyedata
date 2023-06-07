@@ -366,6 +366,16 @@ const save_all = {
         "Content-Type": "application/json",
       },
     });
+    fetch("server/save_json.php", {
+      method: "POST",
+      body: JSON.stringify({
+        id: `${subject_id}_interactions`,
+        data: jsPsych.data.getInteractionData().json(),
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
   },
   post_trial_gap: 2000,
 };
