@@ -44,6 +44,13 @@ const instructions = {
       css_classes: ["instructions"],
     },
     {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: `<p>You need to use a device with a keyboard to complete this experiment.</p>
+      <p>Press the spacebar now to verify you have a keyboard.</p>`,
+      choices: [" "],
+      css_classes: ["instructions"],
+    },
+    {
       type: jsPsychHtmlButtonResponse,
       stimulus: `<p>In order to complete this experiment, you will need to allow us to record from your device's camera.</p>
             <p>We will record without audio, and each recording will be only about one second long.</p>
