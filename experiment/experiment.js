@@ -1,7 +1,7 @@
 const n_test_trials = 144;
 const n_test_trials_per_block = 48;
 const n_blocks = n_test_trials / n_test_trials_per_block;
-const trial_duration = 1000;
+const trial_duration = 500;
 const saccade_time = 1000;
 const min_x = 5;
 const max_x = 95;
@@ -183,6 +183,7 @@ for (let b = 0; b < n_blocks; b++) {
       x: point[0],
       y: point[1],
       type: "test",
+      detect: i < 10 ? true : false, // First 10 trials are detect trials
     });
   }
 }
@@ -232,6 +233,26 @@ const testTrial = {
   },
 };
 
+const dotDetectionTrial = {
+  timeline: [{
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: () => {
+      return `<div style="position: relative; width:100vw; height: 100vh; cursor: none;"><div class="fixation-point dot-detect" style="top:${jsPsych.timelineVariable(
+        "y"
+      )}%; left:${jsPsych.timelineVariable("x")}%;"></div></div>`;
+    },
+    choices: [" "],
+    data: {
+      task: 'dot_detection',
+      x: jsPsych.timelineVariable("x"),
+      y: jsPsych.timelineVariable("y"),
+    }
+  }],
+  conditional_function: function(){
+    return jsPsych.timelineVariable('detect');
+  }
+}
+
 const break_trial = {
   type: jsPsychHtmlButtonResponse,
   stimulus: () => {
@@ -252,11 +273,12 @@ const test = {
 for (let b = 0; b < test_parameters.length; b++) {
 
   const block = {
-    timeline: [preTestTrial, testTrial],
+    timeline: [preTestTrial, testTrial, dotDetectionTrial],
     timeline_variables: test_parameters[b],
     data: {
       block: b
-    }
+    },
+    randomize_order: true,
   };
   test.timeline.push(block);
   test.timeline.push(break_trial);

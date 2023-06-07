@@ -7,3 +7,8 @@
     position: absolute;
     transform: translate(-50%, -50%);
 }
+
+.dot-detect {
+    border: 6px solid red;
+    background-color: black;
+}
