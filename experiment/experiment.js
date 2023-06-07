@@ -1,7 +1,7 @@
 const n_test_trials = 144;
 const n_test_trials_per_block = 48;
 const n_blocks = n_test_trials / n_test_trials_per_block;
-const trial_duration = 1000;
+const trial_duration = 500;
 const saccade_time = 1000;
 const min_x = 5;
 const max_x = 95;
@@ -41,6 +41,13 @@ const instructions = {
             <p>Eye tracking is a commonly used method in psychological experiments, but is currently difficult to do online.</p>
             <p>Your participation in this experiment will help us test new tools for eye tracking so that future experiments can get better data.</p>`,
       choices: ["Continue"],
+      css_classes: ["instructions"],
+    },
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: `<p>You need to use a device with a keyboard to complete this experiment.</p>
+      <p>Press the spacebar now to verify you have a keyboard.</p>`,
+      choices: [" "],
       css_classes: ["instructions"],
     },
     {
@@ -130,6 +137,51 @@ const getAspectRatio = {
   ],
 };
 
+const practiceTrials = {
+  timeline: [
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: () => {
+        return `<div style="position: relative; width:100vw; height: 100vh; cursor: none;"><div class="fixation-point" style="top:${jsPsych.timelineVariable(
+          "y"
+        )}%; left:${jsPsych.timelineVariable("x")}%;"></div></div>`;
+      },
+      choices: "NO_KEYS",
+      trial_duration: saccade_time + trial_duration,
+      data: {
+        task: 'practice',
+        x: jsPsych.timelineVariable("x"),
+        y: jsPsych.timelineVariable("y"),
+      }
+    },
+    {
+      timeline: [{
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: () => {
+          return `<div style="position: relative; width:100vw; height: 100vh; cursor: none;"><div class="fixation-point dot-detect" style="top:${jsPsych.timelineVariable(
+            "y"
+          )}%; left:${jsPsych.timelineVariable("x")}%;"></div></div>
+          <div style="position: absolute; bottom: 5%; width:100vw; text-align: center;"><p>Press the spacebar when the dot turns red.</p></div>`;
+        },
+        choices: [" "],
+        data: {
+          task: 'practice',
+          x: jsPsych.timelineVariable("x"),
+          y: jsPsych.timelineVariable("y"),
+        }
+      }],
+      conditional_function: function(){
+        return jsPsych.timelineVariable('detect');
+      }
+    }
+  ],
+  timeline_variables: [
+    {x: 50, y: 50, detect: false},
+    {x: 25, y: 25, detect: false},
+    {x: 75, y: 75, detect: true},
+  ]
+}
+
 
 // Task Instructions
 const taskInstructions = {
@@ -145,12 +197,29 @@ const taskInstructions = {
     },
     {
       type: jsPsychHtmlButtonResponse,
+      stimulus: `<p>Sometimes the dot will turn red and black, like this:</p> 
+        <div style="position: relative; width:100%; height: 2em;"><div class="fixation-point dot-detect" style="top:50%; left:50%;"></div></div>
+        <p>When this happens, please press the spacebar as quickly as you can.</p>
+        <p>We'll do a quick practice now.</p>`,
+      choices: ["Continue"],
+      css_classes: ["instructions"],
+    },
+    practiceTrials,
+    {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `<p>Great! We're ready almost ready to begin.</p>`,
+      choices: ["Continue"],
+      css_classes: ["instructions"],
+    },
+    {
+      type: jsPsychHtmlButtonResponse,
       stimulus: `<p>There are ${
         n_test_trials
       } dots that will be shown. Each one will be on the screen for ${
         (trial_duration + saccade_time) / 1000
       } seconds.</p>
-      <p>There will be a few short breaks in the experiment to let you take a moment to rest your eyes.</p> `,
+      <p>There will be a two short breaks in the experiment to let you take a moment to rest your eyes.</p>
+      <p>Please try to remain focused on the dot for the entire experiment.</p> `,
       choices: ["I'm ready to begin"],
       post_trial_gap: 2000,
       css_classes: ["instructions"],
@@ -183,6 +252,7 @@ for (let b = 0; b < n_blocks; b++) {
       x: point[0],
       y: point[1],
       type: "test",
+      detect: i < 10 ? true : false, // First 10 trials are detect trials
     });
   }
 }
@@ -232,6 +302,26 @@ const testTrial = {
   },
 };
 
+const dotDetectionTrial = {
+  timeline: [{
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: () => {
+      return `<div style="position: relative; width:100vw; height: 100vh; cursor: none;"><div class="fixation-point dot-detect" style="top:${jsPsych.timelineVariable(
+        "y"
+      )}%; left:${jsPsych.timelineVariable("x")}%;"></div></div>`;
+    },
+    choices: [" "],
+    data: {
+      task: 'dot_detection',
+      x: jsPsych.timelineVariable("x"),
+      y: jsPsych.timelineVariable("y"),
+    }
+  }],
+  conditional_function: function(){
+    return jsPsych.timelineVariable('detect');
+  }
+}
+
 const break_trial = {
   type: jsPsychHtmlButtonResponse,
   stimulus: () => {
@@ -252,11 +342,12 @@ const test = {
 for (let b = 0; b < test_parameters.length; b++) {
 
   const block = {
-    timeline: [preTestTrial, testTrial],
+    timeline: [preTestTrial, testTrial, dotDetectionTrial],
     timeline_variables: test_parameters[b],
     data: {
       block: b
-    }
+    },
+    randomize_order: true,
   };
   test.timeline.push(block);
   test.timeline.push(break_trial);
@@ -264,7 +355,9 @@ for (let b = 0; b < test_parameters.length; b++) {
 
 const save_all = {
   type: jsPsychCallFunction,
-  func: () => {
+  func: (done) => {
+    const display = jsPsych.getDisplayElement();
+    display.innerHTML = `<p>Saving data. This takes about 5 seconds.</p>`;
     fetch("server/save_json.php", {
       method: "POST",
       body: JSON.stringify({
@@ -275,8 +368,19 @@ const save_all = {
         "Content-Type": "application/json",
       },
     });
+    fetch("server/save_json.php", {
+      method: "POST",
+      body: JSON.stringify({
+        id: `${subject_id}_interactions`,
+        data: jsPsych.data.getInteractionData().json(),
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    setTimeout(done, 4000);
   },
-  post_trial_gap: 2000,
+  aysnc: true
 };
 
 const exit_full_screen = {
