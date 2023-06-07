@@ -130,6 +130,50 @@ const getAspectRatio = {
   ],
 };
 
+const practiceTrials = {
+  timeline: [
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: () => {
+        return `<div style="position: relative; width:100vw; height: 100vh; cursor: none;"><div class="fixation-point" style="top:${jsPsych.timelineVariable(
+          "y"
+        )}%; left:${jsPsych.timelineVariable("x")}%;"></div></div>`;
+      },
+      choices: "NO_KEYS",
+      trial_duration: saccade_time + trial_duration,
+      data: {
+        task: 'practice',
+        x: jsPsych.timelineVariable("x"),
+        y: jsPsych.timelineVariable("y"),
+      }
+    },
+    {
+      timeline: [{
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: () => {
+          return `<div style="position: relative; width:100vw; height: 100vh; cursor: none;"><div class="fixation-point dot-detect" style="top:${jsPsych.timelineVariable(
+            "y"
+          )}%; left:${jsPsych.timelineVariable("x")}%;"></div></div>`;
+        },
+        choices: [" "],
+        data: {
+          task: 'practice',
+          x: jsPsych.timelineVariable("x"),
+          y: jsPsych.timelineVariable("y"),
+        }
+      }],
+      conditional_function: function(){
+        return jsPsych.timelineVariable('detect');
+      }
+    }
+  ],
+  timeline_variables: [
+    {x: 50, y: 50, detect: false},
+    {x: 25, y: 25, detect: false},
+    {x: 75, y: 75, detect: true},
+  ]
+}
+
 
 // Task Instructions
 const taskInstructions = {
@@ -145,12 +189,29 @@ const taskInstructions = {
     },
     {
       type: jsPsychHtmlButtonResponse,
+      stimulus: `<p>Sometimes the dot will turn red and black, like this:</p> 
+        <div style="position: relative; width:100%; height: 2em;"><div class="fixation-point dot-detect" style="top:50%; left:50%;"></div></div>
+        <p>When this happens, please press the spacebar as quickly as you can.</p>
+        <p>We'll do a quick practice now.</p>`,
+      choices: ["Continue"],
+      css_classes: ["instructions"],
+    },
+    practiceTrials,
+    {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `<p>Great! We're ready almost ready to begin.</p>`,
+      choices: ["Continue"],
+      css_classes: ["instructions"],
+    },
+    {
+      type: jsPsychHtmlButtonResponse,
       stimulus: `<p>There are ${
         n_test_trials
       } dots that will be shown. Each one will be on the screen for ${
         (trial_duration + saccade_time) / 1000
       } seconds.</p>
-      <p>There will be a few short breaks in the experiment to let you take a moment to rest your eyes.</p> `,
+      <p>There will be a two short breaks in the experiment to let you take a moment to rest your eyes.</p>
+      <p>Please try to remain focused on the dot for the entire experiment.</p> `,
       choices: ["I'm ready to begin"],
       post_trial_gap: 2000,
       css_classes: ["instructions"],
