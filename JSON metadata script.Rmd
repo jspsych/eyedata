@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 # Set to TRUE when running for the first time, FALSE after data is loaded
-retrieve_data <- TRUE
+retrieve_data <- FALSE
 ```
 
 
@@ -170,11 +170,11 @@ metadata <- detection.task.data %>%
   select(rt, subject_id) %>% 
   group_by(subject_id) %>% 
   summarize(mean = mean(rt), median=median(rt), sd = sd(rt), 
-            "prop>200ms" = sum(rt < 200) / n(), 
-            "prop>400ms" = sum(rt < 400) / n(), 
-            "prop>800ms" = sum(rt < 800) / n(),
-            "prop>1600ms" = sum(rt < 1600) / n(),
-            "prop>3200ms" = sum(rt < 3200) / n()) %>% 
+            "prop<200ms" = sum(rt < 200) / n(), 
+            "prop<400ms" = sum(rt < 400) / n(), 
+            "prop<800ms" = sum(rt < 800) / n(),
+            "prop<1600ms" = sum(rt < 1600) / n(),
+            "prop<3200ms" = sum(rt < 3200) / n()) %>% 
   left_join(metadata, by="subject_id")
 ```
 
@@ -209,14 +209,25 @@ for (file in json_interact_files) {
 
 ```{r}
 interacts.data.wide <- interacts.data %>% 
-  group_by(subject_id) %>% 
-  count(event) %>% 
+  group_by(subject_id) %>%
+  filter(trial >= 9 & trial <= 340) %>% 
+  count(event) %>%
   pivot_wider(id_cols=subject_id, names_from=event, values_from=n)
   
 interacts.data.wide[is.na(interacts.data.wide)] <- 0
-
+  
 metadata <- left_join(interacts.data.wide, metadata, by="subject_id")
 ```
 
+```{r}
+fullscreenexit.trial <- interacts.data %>% 
+  filter(event == "fullscreenexit") %>% 
+  group_by(subject_id) %>% 
+  slice_head(n=1) %>% 
+  select(subject_id, trial) %>% 
+  rename("fsexit_trial" = "trial")
+
+metadata <- left_join(fullscreenexit.trial, metadata, by="subject_id")
+```
 
 
