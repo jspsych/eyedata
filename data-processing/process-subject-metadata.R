@@ -1,6 +1,6 @@
 setwd(here::here())
 
-#### CONFIG
+#### CONFIG ###########
 retrieve_data <- TRUE
 osf_access_token <- paste(
   readLines("data-processing/osf-token.txt"),
@@ -9,6 +9,7 @@ osf_access_token <- paste(
 private_json_osf_component <- "vmdu6"
 private_jpg_osf_component <- "3b6et"
 private_webm_osf_component <- "34t8d"
+#######################
 
 library(osfr)
 library(tidyverse)
@@ -93,14 +94,8 @@ jpg_files_per_subject <- data.frame(file_name = jpg_files) %>%
   group_by(subject_id) %>%
   count()
 
-metadata <- left_join(webms.per.subject, metadata, by = "subject_id")
-
 detection_task_data <- json.data %>%
-  filter(task == "dot_detection")
-
-# Record proportion of participant's reaction times above 200, 400, 800, 1600, and 3200 milliseconds
-
-metadata <- detection.task.data %>%
+  filter(task == "dot_detection") %>%
   select(rt, subject_id) %>%
   group_by(subject_id) %>%
   summarize(
@@ -110,47 +105,37 @@ metadata <- detection.task.data %>%
     "prop<800ms" = sum(rt < 800) / n(),
     "prop<1600ms" = sum(rt < 1600) / n(),
     "prop<3200ms" = sum(rt < 3200) / n()
-  ) %>%
-  left_join(metadata, by = "subject_id")
+  )
 
 interacts.data <- NULL
 
 # Concatenate json files into one megafile
 
 # Creates a list of files from json directory
-json_interact_files <- list.files(
+interaction_data <- list.files(
   path = "data/json",
   pattern = "_interactions.json$",
   full.names = TRUE
-)
+) %>%
+lapply(function(x){
+  d <- fromJSON(x) %>%
+  mutate(subject_id = substring(x, 11, 18))
+  return(d)
+}) %>%
+bind_rows()
 
-for (file in json_interact_files) {
-  subject <- substring(file, 11, 18) # string with subject name
-  df <- fromJSON(file) %>%
-    mutate(subject_id = subject)
-
-  if (all(is.null(interacts.data))) {
-    interacts.data <- df
-  } else {
-    interacts.data <- bind_rows(interacts.data, df)
-  }
-}
-
-interacts.data.wide <- interacts.data %>%
+interaction_data_wide <- interaction_data %>%
   group_by(subject_id) %>%
   filter(trial >= 9 & trial <= 340) %>%
   count(event) %>%
   pivot_wider(id_cols = subject_id, names_from = event, values_from = n)
 
-interacts.data.wide[is.na(interacts.data.wide)] <- 0
+interaction_data_wide[is.na(interaction_data_wide)] <- 0
 
-metadata <- left_join(interacts.data.wide, metadata, by = "subject_id")
 
-fullscreenexit.trial <- interacts.data %>%
+fullscreenexit_trial <- interaction_data %>%
   filter(event == "fullscreenexit") %>%
   group_by(subject_id) %>%
   slice_head(n = 1) %>%
   select(subject_id, trial) %>%
-  rename("fsexit_trial" = "trial")
-
-metadata <- left_join(fullscreenexit.trial, metadata, by = "subject_id")
+  rename("fullscreen_exit_trial" = "trial")
