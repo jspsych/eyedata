@@ -91,6 +91,9 @@ const cameraSetup = {
          <div style='float: left;'><img src='img/Webcam Prompt Image.jpg'></img> 
          `,
       choices: ["Integrated Webcam", "External Webcam"], 
+      data: {
+        task: 'webcam-type'
+      }
     },
     {
       type: jsPsychMirrorCamera,
@@ -107,6 +110,9 @@ const cameraSetup = {
       type: jsPsychHtmlButtonResponse,
       stimulus: "<p>Before we begin, will you be wearing glasses for the experiment? Your data will be included whether you wear glasses or not.</p>",
       choices: ["Yes, I am wearing glasses.", "No, I am not wearing glasses."],
+      data: {
+        task: "glasses"
+      }
     },
   ],
 };
@@ -130,6 +136,9 @@ const getAspectRatio = {
     {
       type: jsPsychBrowserCheck,
       features: ["width", "height", "fullscreen"],
+      data: {
+        task: 'browser-check'
+      },
       on_finish: function(data) {
         data.aspect_ratio = data.width / data.height
         },
@@ -397,6 +406,9 @@ const final_survey = {
       <p>This will help the research community develop better tools for eye tracking on the web.</p>
       <p>If you do not want your videos to be part of this public dataset, you can opt out by clicking the button below.</p>`,
       choices: ["It is OK for my videos to be public", "I do not want my videos to be public"],
+      data: {
+        task: 'public-videos'
+      }
     },
     {
       timeline: [
@@ -404,7 +416,10 @@ const final_survey = {
           type: jsPsychHtmlButtonResponse,
           stimulus: `<p>We will remove your videos from the public dataset.</p>
           <p>Is it OK for us to use these videos in our own research? Only members of our research team will have access.</p>`,
-          choices: ["You can use my videos for research", "Please delete my videos completely"]
+          choices: ["You can use my videos for research", "Please delete my videos completely"],
+          data: {
+            task: 'research-videos'
+          }
         }
       ],
       conditional_function: () => {
