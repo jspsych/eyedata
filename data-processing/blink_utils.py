@@ -67,7 +67,7 @@ RIGHT_EYE_INNER_CORNER_IDX = 362
 RIGHT_TOP_IDX = 145
 RIGHT_BOTTOM_IDX = 159
 
-def calculate_EAR(file_path):
+def calculate_EAR(frame):
     """
     Calculate max eye aspect ratio from face image.
     """
@@ -75,8 +75,8 @@ def calculate_EAR(file_path):
     # --- Main Processing Loop ---
     with MP_FACE_MESH.FaceMesh(static_image_mode=True, max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5) as face_mesh:
 
-        image_height, image_width, _ = file_path.shape
-        results = face_mesh.process(cv2.cvtColor(file_path, cv2.COLOR_BGR2RGB))
+        image_height, image_width, _ = frame.shape
+        results = face_mesh.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
         if results.multi_face_landmarks:
             face_landmarks = results.multi_face_landmarks[0]
@@ -106,7 +106,7 @@ def extract_EAR_seq(filename):
         Calculate EAR for each frame, return list of all scores in order.
         """
 
-        video = cv2.VideoCapture(filename)
+        video = cv2.VideoCapture(filename, cv2.CAP_FFMPEG)
 
         EAR_list = [] 
 
