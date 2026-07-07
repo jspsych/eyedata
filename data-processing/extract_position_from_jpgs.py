@@ -2,6 +2,7 @@
 #%%
 ####
 import tarfile
+import shutil
 import os
 from osfclient import OSF
 from pathlib import Path
@@ -33,6 +34,7 @@ else:
 
 PRIVATE_JPG_OSF_COMPONENT = "xuyvw" 
 PUBLIC_JPG_OSF_COMPONENT = "7s2ae"
+TEST_JPG_OSF_COMPONENT = "p3xyj"
 #######################
 
 #%%
@@ -42,6 +44,7 @@ osf = OSF(token=osf_access_token)
 components_to_check = {
     "PRIVATE_JPG": PRIVATE_JPG_OSF_COMPONENT,
     "PUBLIC_JPG": PUBLIC_JPG_OSF_COMPONENT,
+    "TEST_JPG": TEST_JPG_OSF_COMPONENT,
 }
 
 print("--- Scanning OSF Components ---")
@@ -70,11 +73,13 @@ for label, node_id in components_to_check.items():
 #%%
 private_dir = project_root / "private_data"
 public_dir = project_root / "public_data"
-data_dirs = [private_dir, public_dir]
+test_dir = project_root / "test_data"
+data_dirs = [private_dir, public_dir, test_dir]
 
 if RETRIEVE_DATA:
     private_dir.mkdir(exist_ok=True)
     public_dir.mkdir(exist_ok=True)
+    test_dir.mkdir(exist_ok=True)
 
     def download_node_files(node_id, target_dir, file_filter=None):
         project = osf.project(node_id)
@@ -94,18 +99,46 @@ if RETRIEVE_DATA:
     print("\n--- Downloading Data ---")
     download_node_files(PRIVATE_JPG_OSF_COMPONENT, private_dir)
     download_node_files(PUBLIC_JPG_OSF_COMPONENT, public_dir)
+    download_node_files(TEST_JPG_OSF_COMPONENT, test_dir)
 
     # Untar all files
     for data_dir in data_dirs:
         print(f"\n--- Extracting tarballs in {data_dir.parts[-1]} ---")
-        json_tar = data_dir / "json.tar.gz"
         jpg_tar = data_dir / "jpg.tar.gz"
 
-        if jpg_tar.exists():
+        split_parts = sorted(data_dir.glob("jpg.tar.gz.part.*"))
+
+        # Combine if parts exist and the combined file hasn't been made yet
+        if split_parts and not jpg_tar.exists():
+            print(f"Found {len(split_parts)} split parts. Combining into {jpg_tar.name}...")
+            try:
+                with open(jpg_tar, 'wb') as outfile:
+                    for part in split_parts:
+                        with open(part, 'rb') as infile:
+                            # copyfileobj reads and writes in chunks, saving RAM
+                            shutil.copyfileobj(infile, outfile) 
+                print("Combination successful.")
+            except Exception as e:
+                print(f"Error combining parts: {e}")
+                if jpg_tar.exists():
+                    jpg_tar.unlink()
+
+        if jpg_tar.exists() and not (data_dir / "data/jpg").exists():
             try: 
                 print("Extracting JPG tarball...")
                 with tarfile.open(jpg_tar, "r:gz") as tar:
-                    tar.extractall(path=data_dir)
+                    first_item = tar.next()
+
+                    if first_item and not first_item.name.startswith("data/jpg/"):
+                        extract_path = data_dir / "data/jpg"
+                        extract_path.mkdir(parents=True, exist_ok=True)
+                        tar.extractall(path=extract_path)
+                    else:
+                        # Already has structure
+                        extract_path = data_dir
+
+                    tar.extractall(path=extract_path)
+
             except Exception as e:
                 print(f"Error extracting JPG tarball: {e}")
                 jpg_tar.unlink()  
@@ -114,7 +147,7 @@ if RETRIEVE_DATA:
 # Extract position data from JPGs to parquet
 print("\n--- Extracting Position Data from JPGs ---")
 
-OVERWRITE = True 
+OVERWRITE = False
 
 def extract_position_data(jpg_dir, output_parquet):
     position_data = []

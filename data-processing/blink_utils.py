@@ -110,16 +110,16 @@ def extract_EAR_seq(filename):
 
         EAR_list = [] 
 
-        while video.isOpened():
-            ret, frame = video.read()
+        # Initialize model once
+        with MP_FACE_MESH.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True) as face_mesh:
+            while video.isOpened():
+                ret, frame = video.read()
 
-            if ret:
+                if not ret:
+                    break
 
                 EAR = calculate_EAR(frame)
                 EAR_list.append(EAR)
-            
-            else:
-                break
 
         video.release()
 
@@ -141,7 +141,6 @@ def get_blink_indices(ear_sequence, fps=30, z_threshold=3.5, window_size_s=1.0, 
     
     # Constant to convert MAD to an estimate of Standard Deviation
     # (for normal distributions, sigma approx 1.4826 * MAD) 
-    #   - Does this method assume normal distribution? Is this fine?
     MAD_SCALE_FACTOR = 1.4826
 
     for i, ear in enumerate(ear_sequence):
@@ -171,3 +170,162 @@ def get_blink_indices(ear_sequence, fps=30, z_threshold=3.5, window_size_s=1.0, 
             blink_dict[i] = ear
 
     return blink_dict
+
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
+
+def extract_blendshape_blink_seq(video_path, model_path="face_landmarker.task"):
+    """
+    Processes video and extracts blink scores using MediaPipe Blendshapes.
+    Returns a list of scores (0.0 to 1.0) representing eye closure per frame.
+    """
+    # 1. Configure the Face Landmarker Options
+    base_options = python.BaseOptions(model_asset_path=model_path)
+    
+    # We use VIDEO mode to leverage temporal tracking across frames
+    options = vision.FaceLandmarkerOptions(
+        base_options=base_options,
+        output_face_blendshapes=True,
+        running_mode=vision.RunningMode.VIDEO,
+        num_faces=1
+    )
+    
+    blink_scores_list = []
+
+    # 2. Initialize the model ONCE using context management
+    with vision.FaceLandmarker.create_from_options(options) as landmarker:
+        video = cv2.VideoCapture(video_path)
+        fps = video.get(cv2.CAP_PROP_FPS)
+        
+        # In VIDEO mode, MediaPipe requires timestamps
+        frame_index = 0 
+        
+        while video.isOpened():
+            ret, frame = video.read()
+            if not ret:
+                break
+                
+            # Convert OpenCV BGR format to MediaPipe RGB format
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+            
+            # Calculate timestamp in milliseconds
+            timestamp_ms = int((frame_index / fps) * 1000)
+            
+            # 3. Detect features and extract blendshapes
+            detection_result = landmarker.detect_for_video(mp_image, timestamp_ms)
+            
+            if detection_result.face_blendshapes:
+                # Get blendshapes for the primary face
+                blendshapes = detection_result.face_blendshapes[0]
+                
+                left_blink_score = 0.0
+                right_blink_score = 0.0
+                
+                # Iterate through the 52 blendshapes to find the blink classifications
+                for category in blendshapes:
+                    if category.category_name == 'eyeBlinkLeft':
+                        left_blink_score = category.score
+                    elif category.category_name == 'eyeBlinkRight':
+                        right_blink_score = category.score
+                        
+                # Take the max score to account for winks or uneven closures
+                max_blink_score = max(left_blink_score, right_blink_score)
+                blink_scores_list.append(max_blink_score)
+                
+            else:
+                # If no face is found, default to 0.0
+                blink_scores_list.append(0.0)
+                
+            frame_index += 1
+            
+        video.release()
+        
+    return blink_scores_list
+
+def get_blendshape_blink_indices(blink_scores_list, threshold=0.6):
+    """
+    Because blendshapes output a normalized score from 0.0 to 1.0, 
+    we can use a static threshold. No MAD or sliding window needed!
+    """
+    blink_dict = {}
+    
+    for i, score in enumerate(blink_scores_list):
+        if score > threshold:
+            blink_dict[i] = score
+            
+    return blink_dict
+    
+
+if __name__ == "__main__":
+    # Test the blink detection on a sample video
+    import os
+    import matplotlib.pyplot as plt
+    from pathlib import Path
+    import urllib.request
+
+    
+
+    current_dir = Path(__file__).parent.resolve()
+    project_root = current_dir.parent.parent.parent  # Adjust as needed to reach project root
+    os.chdir(project_root)
+
+    model_path = "face_landmarker.task"
+
+    # Check if the file already exists
+    if not os.path.exists(model_path):
+        print("Downloading face_landmarker.task from Google...")
+        url = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
+        urllib.request.urlretrieve(url, model_path)
+        print("Download complete!")
+    else:
+        print("Model already exists.")
+
+    test_video_path = "test_videos/video_1.avi"  # Replace with your test video path
+
+    # Get blinks using custom EAR functions:
+
+    # blink_score_list = extract_EAR_seq(test_video_path)
+    # blink_indices = get_blink_indices(ear_sequence, fps=30, z_threshold=3.5, window_size_s=1.0, global_ear_threshold=0.15)
+
+    # blink_frames = list(blink_indices.keys())
+    # blink_values = list(blink_indices.values())
+    # print(f"Detected blinks at frame indices: {blink_frames}")
+
+    # Get blinks using MediaPipe Blendshapes:
+    blink_scores_list = extract_blendshape_blink_seq(test_video_path, model_path=model_path)
+
+    thres_val = 0.6
+    blink_indices = get_blendshape_blink_indices(blink_scores_list, threshold=thres_val)
+
+    blink_frames = list(blink_indices.keys())
+    print(f"Detected blinks at frame indices: {blink_frames}")
+
+    blink_values = list(blink_indices.values())
+
+    # ==========================================
+    # Plotting the EAR Sequence and Blink Indices
+    # ==========================================
+    # Video 1 blink frames: [10,11, 40, 41, 42, 80, 81, 82, 100, 101, 103, 131, 132, 133, 163, 164, 191, 192, 193, 229, 230, 259, 260]
+
+    plt.figure(figsize=(14, 6))
+
+    # 1. Plot the continuous EAR signal
+    plt.plot(blink_scores_list, label="Blink Scores", color="#1f77b4", linewidth=1.5)
+
+    # 2. Scatter plot the detected blinks on top of the signal
+    plt.scatter(blink_frames, blink_values, color="red", s=60, zorder=5, label="Predicted Blinks")
+
+    # 3. Draw a horizontal line representing your global hard-threshold
+    plt.axhline(y=thres_val, color='gray', linestyle='--', alpha=0.7, label=f"Global Threshold ({thres_val})")
+
+    # Formatting the chart
+    plt.title("Blink Scores over Time", fontsize=16)
+    plt.xlabel("Frame Index", fontsize=12)
+    plt.ylabel("Blink Score", fontsize=12)
+    plt.legend(loc="upper right")
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.tight_layout()
+
+    # Display the plot
+    plt.show()
