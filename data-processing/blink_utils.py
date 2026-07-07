@@ -1,6 +1,7 @@
 import mediapipe as mp
 import numpy as np
 import cv2
+from mediapipe.python.solutions import face_mesh as MP_FACE_MESH
 
 def get_frames(file_path):
     """
@@ -49,8 +50,6 @@ def get_frame(file_path, index):
         return frame
     else:
         return None
-
-MP_FACE_MESH = mp.solutions.face_mesh
 
 # All points for the eye contours
 LEFT_EYE_INDICES = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
