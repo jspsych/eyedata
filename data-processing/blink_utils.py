@@ -171,6 +171,7 @@ def get_frame(file_path, index):
 
 #     return blink_dict
 
+
 def extract_blendshape_blink_seq(video_path, model_path="face_landmarker.task"):
     """
     Processes video and extracts blink scores using MediaPipe Blendshapes.
@@ -231,8 +232,8 @@ def extract_blendshape_blink_seq(video_path, model_path="face_landmarker.task"):
                 blink_scores_list.append(max_blink_score)
                 
             else:
-                # If no face is found, default to 0.0
-                blink_scores_list.append(0.0)
+                # If no face is found, default to -1.0
+                blink_scores_list.append(-1.0)
                 
             frame_index += 1
             
