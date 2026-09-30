@@ -194,9 +194,13 @@ def extract_blendshape_blink_seq(video_path, model_path="face_landmarker.task"):
     with vision.FaceLandmarker.create_from_options(options) as landmarker:
         video = cv2.VideoCapture(video_path)
         fps = video.get(cv2.CAP_PROP_FPS)
-        
+        # webm metadata is often missing/garbage; fall back to 30 fps if so
+        if not fps or not np.isfinite(fps) or fps <= 0 or fps > 1000:
+            fps = 30.0
+
         # In VIDEO mode, MediaPipe requires timestamps
-        frame_index = 0 
+        frame_index = 0
+        last_timestamp_ms = -1
         
         while video.isOpened():
             ret, frame = video.read()
@@ -208,8 +212,10 @@ def extract_blendshape_blink_seq(video_path, model_path="face_landmarker.task"):
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
             
             # Calculate timestamp in milliseconds
-            timestamp_ms = int((frame_index / fps) * 1000)
-            
+            # (must be strictly increasing, or detect_for_video raises)
+            timestamp_ms = max(int((frame_index / fps) * 1000), last_timestamp_ms + 1)
+            last_timestamp_ms = timestamp_ms
+
             # 3. Detect features and extract blendshapes
             detection_result = landmarker.detect_for_video(mp_image, timestamp_ms)
             
