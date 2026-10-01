@@ -1,0 +1,33 @@
+# HTCondor submit file for extract_video_metadata.py
+# Submit from this directory:  condor_submit extract_video_metadata.sub
+#
+# Streams the webm .tar files from Google Cloud Storage, processes the videos
+# in memory, and brings the CSVs back to ./video_metadata. Existing CSVs in
+# ./video_metadata are sent in with the job, so resubmitting resumes where the
+# last run stopped.
+
+container_image = docker://python:3.11-slim
+
+executable = metadata_from_video.sh
+
+# Credentials: a service-account key, or the user credentials from
+# `gcloud auth application-default login`. Use an absolute path (no ~)
+KEY_FILE = /home/cmikulski/.config/gcloud/application_default_credentials.json
+
+transfer_input_files = metadata_from_video.py, blink_utils.py, $(KEY_FILE), video_metadata
+transfer_output_files = video_metadata
+should_transfer_files = YES
+# If the job is evicted, save the partial CSVs and send them to the restarted job
+when_to_transfer_output = ON_EXIT_OR_EVICT
+
+environment = "GOOGLE_APPLICATION_CREDENTIALS=application_default_credentials.json N_WORKERS=$(request_cpus)"
+
+log = logs/extract_video_metadata_$(Cluster).log
+output = logs/extract_video_metadata_$(Cluster).out
+error = logs/extract_video_metadata_$(Cluster).err
+
+request_cpus = 8
+request_memory = 16GB
+request_disk = 100GB
+
+queue 1

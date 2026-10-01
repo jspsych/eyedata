@@ -1,2 +1,6 @@
 osf-token.txt
 data
+/data-processing/logs/
+/data-processing/__pycache__/
+*.csv
+*.pyc

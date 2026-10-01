@@ -172,14 +172,13 @@ def get_frame(file_path, index):
 #     return blink_dict
 
 
-def extract_blendshape_blink_seq(video_path, model_path="face_landmarker.task"):
+def create_blink_landmarker(model_path="face_landmarker.task"):
     """
-    Processes video and extracts blink scores using MediaPipe Blendshapes.
-    Returns a list of scores (0.0 to 1.0) representing eye closure per frame.
+    Creates a MediaPipe Face Landmarker in VIDEO mode with blendshapes enabled.
+    Use it as a context manager and feed frames to frame_blink_score in order.
     """
-    # 1. Configure the Face Landmarker Options
     base_options = python.BaseOptions(model_asset_path=model_path)
-    
+
     # We use VIDEO mode to leverage temporal tracking across frames
     options = vision.FaceLandmarkerOptions(
         base_options=base_options,
@@ -187,11 +186,47 @@ def extract_blendshape_blink_seq(video_path, model_path="face_landmarker.task"):
         running_mode=vision.RunningMode.VIDEO,
         num_faces=1
     )
-    
+    return vision.FaceLandmarker.create_from_options(options)
+
+def frame_blink_score(landmarker, frame, timestamp_ms):
+    """
+    Returns the blink score (0.0 to 1.0) for one BGR frame, or -1.0 if no face is found.
+    timestamp_ms must be strictly increasing across calls on the same landmarker.
+    """
+    # Convert OpenCV BGR format to MediaPipe RGB format
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+
+    detection_result = landmarker.detect_for_video(mp_image, timestamp_ms)
+
+    if not detection_result.face_blendshapes:
+        return -1.0
+
+    # Get blendshapes for the primary face
+    blendshapes = detection_result.face_blendshapes[0]
+
+    left_blink_score = 0.0
+    right_blink_score = 0.0
+
+    # Iterate through the 52 blendshapes to find the blink classifications
+    for category in blendshapes:
+        if category.category_name == 'eyeBlinkLeft':
+            left_blink_score = category.score
+        elif category.category_name == 'eyeBlinkRight':
+            right_blink_score = category.score
+
+    # Take the max score to account for winks or uneven closures
+    return max(left_blink_score, right_blink_score)
+
+def extract_blendshape_blink_seq(video_path, model_path="face_landmarker.task"):
+    """
+    Processes video and extracts blink scores using MediaPipe Blendshapes.
+    Returns a list of scores (0.0 to 1.0) representing eye closure per frame.
+    """
     blink_scores_list = []
 
-    # 2. Initialize the model ONCE using context management
-    with vision.FaceLandmarker.create_from_options(options) as landmarker:
+    # Initialize the model ONCE using context management
+    with create_blink_landmarker(model_path) as landmarker:
         video = cv2.VideoCapture(video_path)
         fps = video.get(cv2.CAP_PROP_FPS)
         # webm metadata is often missing/garbage; fall back to 30 fps if so
@@ -201,50 +236,22 @@ def extract_blendshape_blink_seq(video_path, model_path="face_landmarker.task"):
         # In VIDEO mode, MediaPipe requires timestamps
         frame_index = 0
         last_timestamp_ms = -1
-        
+
         while video.isOpened():
             ret, frame = video.read()
             if not ret:
                 break
-                
-            # Convert OpenCV BGR format to MediaPipe RGB format
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-            
+
             # Calculate timestamp in milliseconds
             # (must be strictly increasing, or detect_for_video raises)
             timestamp_ms = max(int((frame_index / fps) * 1000), last_timestamp_ms + 1)
             last_timestamp_ms = timestamp_ms
 
-            # 3. Detect features and extract blendshapes
-            detection_result = landmarker.detect_for_video(mp_image, timestamp_ms)
-            
-            if detection_result.face_blendshapes:
-                # Get blendshapes for the primary face
-                blendshapes = detection_result.face_blendshapes[0]
-                
-                left_blink_score = 0.0
-                right_blink_score = 0.0
-                
-                # Iterate through the 52 blendshapes to find the blink classifications
-                for category in blendshapes:
-                    if category.category_name == 'eyeBlinkLeft':
-                        left_blink_score = category.score
-                    elif category.category_name == 'eyeBlinkRight':
-                        right_blink_score = category.score
-                        
-                # Take the max score to account for winks or uneven closures
-                max_blink_score = max(left_blink_score, right_blink_score)
-                blink_scores_list.append(max_blink_score)
-                
-            else:
-                # If no face is found, default to -1.0
-                blink_scores_list.append(-1.0)
-                
+            blink_scores_list.append(frame_blink_score(landmarker, frame, timestamp_ms))
             frame_index += 1
-            
+
         video.release()
-        
+
     return blink_scores_list
 
 def get_blendshape_blink_indices(blink_scores_list, threshold=0.6):
